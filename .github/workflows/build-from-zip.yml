@@ -42,6 +42,36 @@ jobs:
           mkdir build-project
           unzip -q bkash-sms-woo-bridge-v2.1.zip -d build-project
 
+      - name: Fix Java/Kotlin JVM target
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("build-project/app/build.gradle.kts")
+          s = p.read_text()
+
+          old = '''android {
+    namespace = "com.meheraj.bkashbridge"
+    compileSdk = 36
+'''
+
+          new = '''android {
+    namespace = "com.meheraj.bkashbridge"
+    compileSdk = 36
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+'''
+
+          if old not in s:
+              raise SystemExit("Could not find android block")
+
+          p.write_text(s.replace(old, new, 1))
+          print("Java target changed to JVM 17")
+          PY
+
       - name: Build APK
         working-directory: build-project
         run: gradle assembleDebug
