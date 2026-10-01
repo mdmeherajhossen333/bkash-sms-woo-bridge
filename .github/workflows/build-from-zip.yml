@@ -28,12 +28,8 @@ jobs:
           export ANDROID_HOME=/usr/local/lib/android/sdk
           export ANDROID_SDK_ROOT=/usr/local/lib/android/sdk
           export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
-
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
-
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
-            "platforms;android-36" \
-            "build-tools;36.0.0"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -45,7 +41,7 @@ jobs:
           mkdir build-project
           unzip -q bkash-sms-woo-bridge-v2.1.zip -d build-project
 
-      - name: Fix Java/Kotlin JVM target
+      - name: Fix Java and Kotlin target
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -53,26 +49,19 @@ jobs:
           p = Path("build-project/app/build.gradle.kts")
           s = p.read_text()
 
-          old = '''android {
-    namespace = "com.meheraj.bkashbridge"
-    compileSdk = 36
-'''
+          marker = '    compileSdk = 36\n'
 
-          new = '''android {
-    namespace = "com.meheraj.bkashbridge"
-    compileSdk = 36
+          addition = '''
+          compileOptions {
+              sourceCompatibility = JavaVersion.VERSION_17
+              targetCompatibility = JavaVersion.VERSION_17
+          }
+          '''
 
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
-'''
+          if "compileOptions" not in s:
+              s = s.replace(marker, marker + addition, 1)
 
-          if old not in s:
-              raise SystemExit("Could not find android block")
-
-          p.write_text(s.replace(old, new, 1))
-          print("Java target changed to JVM 17")
+          p.write_text(s)
           PY
 
       - name: Build APK
